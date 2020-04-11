@@ -1,3 +1,10 @@
+---
+title: "Homework 5"
+author: "Juan Simons; Giltbuckle3"
+date: "4/10/2020"
+output: html_document
+---
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
