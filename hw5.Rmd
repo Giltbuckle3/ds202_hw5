@@ -8,7 +8,7 @@ This dataset https://data.iowa.gov/Sales-Distribution/2019-Iowa-Liquor-Sales/38x
 
 **Submission instructions**: Create a folder named `ds202_hw5`, and name the RMarkDown file including your solutions `hw5.Rmd` under this folder. For the submission, create a GitHub repository named `ds202_hw5` under your GitHub account, and push both `hw5.Rmd` and the knitted `hw5.html` before the deadline. I will assume you use the same GitHub username as for your HW4 submission. The latest version of your homework appearing on GitHub before the deadline is graded. *It is crucial to follow the exact folder structure and file names*, so that your homework can be reproduced and graded by an automated script. This homework is **due on April 10** by 11:59 pm.
 
-1. The complete dataset is too large. Download and import the alcohol sales data for Ames only: 
+## 1. The complete dataset is too large. Download and import the alcohol sales data for Ames only: 
 
   a. Go to https://data.iowa.gov/Sales-Distribution/2019-Iowa-Liquor-Sales/38x4-vs5h
   b. Click Filter -- Filter -- Go advanced now
@@ -16,15 +16,79 @@ This dataset https://data.iowa.gov/Sales-Distribution/2019-Iowa-Liquor-Sales/38x
   d. Export -- CSV -- Download
   e. Use `readr::read_csv` to import.
   
-2. Data cleaning: 
-  a. extract geographic latitude and longitude from the variable `Store Location`
-  b. make sure the variables are in the correct type, by converting incorrect variable types.
-  c. extract year, month and day from the variable `Date` as separate columns.
-3. First overview:
-  a. Plot a scatterplot of lat and long of store locations. 
-  b. Provide a visual breakdown of the liquor category (by `Category Name`). Include volume sold in the breakdown.
-4. Find the daily sales liquor sales in Ames in 2019. Summarize the number of sales, volume of liquor sold, and amount of money spent.
-5. Plot volume sold by day (use a scatterplot of volume by day and facet by month). Discover trends with the help of `geom_smooth`. Describe any patterns.
-6. Find the dates for ISU football home games in Fall 2019. Can you see a pattern? 
+```{r}
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+library(lubridate)
+```
+
+```{r}
+liquor <- readr::read_csv("2019_Iowa_Liquor_Sales.csv")
+```
+  
+## 2. Data cleaning: 
+### a. extract geographic latitude and longitude from the variable `Store Location`
+  
+```{r}
+liquor$'Store Location' <- substring(liquor$'Store Location', 8, 26)
+cleanLiquor <- liquor %>% separate('Store Location', c("Latitude", "Longitude"), sep = " ")
+```
+
+### b. make sure the variables are in the correct type, by converting incorrect variable types.
+  
+```{r}
+cleanLiquor$Date <- mdy(cleanLiquor$Date)   
+cleanLiquor$Longitude <- as.numeric(cleanLiquor$Longitude)
+cleanLiquor$Latitude <- as.numeric(cleanLiquor$Latitude)
+cleanLiquor$'Vendor Number'<- as.numeric(cleanLiquor$'Vendor Number')
+```
+  
+### c. extract year, month and day from the variable `Date` as separate columns.
+  
+```{r}
+cleanLiquor <- cleanLiquor%>% separate(Date, c("Year", "Day", "Month")) 
+  
+```
+## 3. First overview:
+
+### a.Plot a scatterplot of lat and long of store locations. 
+
+```{r}
+cleanLiquor%>% ggplot(aes(x=Longitude, y=Latitude))+ geom_point(na.rm = TRUE)
+
+```
+
+### b.Provide a visual breakdown of the liquor category (by `Category Name`). Include volume sold in the breakdown.
+
+```{r}
+cleanLiquor%>% group_by(`Category Name`)%>% summarize('Liters Sold' = sum(`Volume Sold (Liters)`), 'Gallons Sold' = sum(`Volume Sold (Gallons)`)) 
+```
+
+```{r}
+cleanLiquor %>% group_by(`Category Name`) %>% summarize(Liters_Sold = sum(`Volume Sold (Liters)`)) %>% select(`Category Name`, Liters_Sold) %>% ggplot(aes(x=reorder(`Category Name`, -Liters_Sold), y=Liters_Sold, fill=Liters_Sold)) + geom_bar(stat="identity") + coord_flip() + xlab('Liquor Category') + ylab('Volume Sold (Liters)')
+```
+
+As seen above, American Vodkas is the alcohol with the mist sales by a lot.This is probably due to the cost and availability of this type of product. Moreover, I did not expect that Canadian Whiskey would be the second most sold alcohol. 
+
+There is also a table provided to compare exact gallon and liter amounts with sales of each of the alcohol products.
+
+## 4. Find the daily sales liquor sales in Ames in 2019. Summarize the number of sales, volume of liquor sold, and amount of money spent.
+
+```{r}
+sales <- cleanLiquor%>% group_by(Year, Month, Day) %>% summarise("Num. Sold" = n(), "Volume Sold (Gallons)"= sum(`Volume Sold (Gallons)`), "Volume Sold (Liters)" = sum(`Volume Sold (Liters)`), "Money Spent" = sum(`Sale (Dollars)`))
+sales
+```
+## 5. Plot volume sold by day (use a scatterplot of volume by day and facet by month). Discover trends with the help of `geom_smooth`. Describe any patterns.
+
+```{r}
+sales%>% ggplot(aes(x=Day, y='Volume Sold (Liters)'))+ geom_point(position = 'jitter')+geom_smooth(se= FALSE)+facet_wrap(~Month)+ ggtitle("Alchohol sold in Ames in 2019 by volume and month")
+```
+
+## 6. Find the dates for ISU football home games in Fall 2019. Can you see a pattern? 
+
+The Iowa State home games in 2019 were as follows: 8/31/19, 9/14/19, 9/21/19, 10/5/19, 10/26/19, 11/16/19, 11/23/19.
+
+There seems to be a pattern of volume of alcohol sold and the dates of home games. Each time there is a home game at Iowa State the alcohol sold spikes.
 
 Note: your submission is supposed to be fully reproducible, i.e. the TA and I will 'knit' your submission in RStudio. 
